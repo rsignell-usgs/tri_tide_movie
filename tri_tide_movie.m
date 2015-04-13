@@ -2,7 +2,7 @@
 % (This uses ADCIRC, but could be easily modified for FVCOM, QUODDY, etc.)
 % Rich Signell (rsignell@usgs.gov)
 
-% Prerequisites:  
+% Prerequisites:
 %   - Matlab 2008b or higher (built-in NetCDF routines)
 %   - "T_TIDE" & "RPSstuff" toolboxes, get them from
 %             http://woodshole.er.usgs.gov/operations/sea-mat/
@@ -55,9 +55,9 @@ units='knots';
 %ax=[-70.4155  -69.9107   41.2322   41.6574]; % nantucket sound
 
 %ax=[-71.1 -70.0 41.7 42.7]; %mass bay
-%ax=[-70.7234  -70.5432   41.4658   41.5643]; %vineyard sound 2
+ax=[-70.7234  -70.4532   41.4258   41.5643]; %vineyard sound 2
 %ax=[ -76.1328  -75.1414   34.9468   35.6094];
-ax=[-70.8658  -70.3828   41.3036   41.5798]; %vineyard sound
+%ax=[-70.8658  -70.3828   41.3036   41.5798]; % martha's vineyard vineyard sound
 %ax=[ -70.6259  -70.3971   41.3788   41.5125]; %cow bay, vineyard sound
 %ax=[ -70.56  -70.34   41.33   41.47]; %MVCO (& Chappy)
 cax=[0 3.0]; % in units selected above
@@ -81,7 +81,8 @@ dt=1.0; % hours
 clegend_loc=[.96 .35 .02 .5];
 
 % SELECT: a movie file name prefix (prefix.flc will be created)
-outfile='woods_hole4.avi';
+%outfile='woods_hole4.avi';
+outfile='woods_hole'
 
 % SELECT: codec for output avi movie
 codec='none';     % Use 'none' for optimal quality and large file size
@@ -175,7 +176,7 @@ con_info = t_getconsts;
 k=0;
 ind_nc=[];
 ind_ttide=[];
-for i = 1:ncon  
+for i = 1:ncon
     if strcmp(consts{i},'STEADY')
         indx = strmatch('Z0',con_info.name,'exact');
     else
@@ -186,7 +187,7 @@ for i = 1:ncon
         k=k+1;
         ind_ttide(k) = indx;
         ind_nc(k) = strmatch(consts{i},names,'exact');
-    end  
+    end
 end
 ncon_match=k;
 uamp=zeros(np,ncon);
@@ -204,7 +205,7 @@ for i = 1:ncon_match
     up = netcdf.getVar(ncid,up_var,[ind_nc(i)-1 0 0],[1 nt 1]);
     va = netcdf.getVar(ncid,va_var,[ind_nc(i)-1 0 0],[1 nt 1]);
     vp = netcdf.getVar(ncid,vp_var,[ind_nc(i)-1 0 0],[1 nt 1]);
-     
+    
     upha(:,i)=up(inbox);
     vpha(:,i)=vp(inbox);
     uamp(:,i)=ua(inbox);
@@ -234,9 +235,9 @@ disp('computing tide...')
 %%
 avi_type='Uncompressed AVI'
 %avi_type='Indexed AVI'
-vidObj=VideoWriter(outfile,avi_type)
-vidObj.FrameRate=4;
-open(vidObj);
+%vidObj=VideoWriter(outfile,avi_type)
+%vidObj.FrameRate=4;
+%open(vidObj);
 for j=1:ntimes;
     %for j=1:1;
     %%
@@ -283,16 +284,16 @@ for j=1:ntimes;
     
     pclegend(cax.',clegend_loc); %use pclegend instead of colorbar for more control
     axes(h1);
-
+    
     %%
     set(gca,'DataAspectRatio',[1 cos(mean(lat(:))*pi/180) 100]);
-%    anim_frame(outfile,j);  % write frames to /tmp
-    currFrame=getframe(ff);
-    writeVideo(vidObj,currFrame)
+    anim_frame(outfile,j);  % write frames to /tmp
+    %    currFrame=getframe(ff);
+    %    writeVideo(vidObj,currFrame)
     hold off
 end
-%anim_make
-close(vidObj)
+anim_make
+%close(vidObj)
 % Make movie with 2 frames per second.  Use no compression as
 % best AVI compression for this application is RLE, and we don't have a
 % RLE CODEC available in Matlab.  So convert later using VideoMach.
