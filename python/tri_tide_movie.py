@@ -21,15 +21,8 @@ print(cubes)
 units = dict({'knots': 1.9438, 'm/s': 1.0})
 consts = ['STEADY', 'M2', 'S2', 'N2', 'K1', 'O1', 'M4', 'M6']
 
-bbox = [-70.7234, -70.4532, 41.4258, 41.5643]
-cax = [0.0, 3.0]  # in units selected above.
-vscale = [0.005]  # Velocity vector scale (try 0.01 and then perhaps adjust).
-
-# SELECT: location of color legend on page
-clegend_loc = [0.96, 0.35, 0.02, 0.5]
-
-xoff = yoff = 0.0
-sta = [-70.7299, 41.5224]  # Station to plot on map.
+bbox = [-70.7234, -70.4532,
+        41.4258, 41.5643]  # Vineyard sound 2.
 
 halo = 0.1
 ax2 = [bbox[0] - halo * (bbox[1] - bbox[0]),
@@ -47,7 +40,7 @@ from pandas import date_range
 
 start = datetime.strptime('18-Sep-2015 05:00',
                           '%d-%b-%Y %H:%M').replace(tzinfo=pytz.utc)
-stop = datetime.strptime('18-Sep-2015 18:00',
+stop = datetime.strptime('19-Sep-2015 05:00',  # '18-Sep-2015 18:00'
                          '%d-%b-%Y %H:%M').replace(tzinfo=pytz.utc)
 
 dt = 1.0  # Hours.
@@ -110,6 +103,14 @@ con_info = con_info['const']  # I am ignore shallow water and sat constants!
 
 # In[8]:
 
+from utide import _ut_constants_fname
+from utide.utilities import loadmatbunch
+
+con_info = loadmatbunch(_ut_constants_fname)['const']
+
+
+# In[9]:
+
 # Find the indices of the tidal constituents.
 
 k = 0
@@ -130,7 +131,7 @@ for name in consts:
         pass  # `const` not found.
 
 
-# In[9]:
+# In[10]:
 
 ua = cubes.extract_strict('Eastward Water Velocity Amplitude')
 up = cubes.extract_strict('Eastward Water Velocity Phase')
@@ -138,7 +139,7 @@ va = cubes.extract_strict('Northward Water Velocity Amplitude')
 vp = cubes.extract_strict('Northward Water Velocity Phase')
 
 
-# In[10]:
+# In[11]:
 
 uamp = ua.data[0, inbox, :][:, ind_nc]
 vamp = va.data[0, inbox, :][:, ind_nc]
@@ -146,27 +147,22 @@ upha = up.data[0, inbox, :][:, ind_nc]
 vpha = vp.data[0, inbox, :][:, ind_nc]
 
 
-# In[11]:
+# In[12]:
 
 freq_nc = frequency[ind_nc]
 
 
-# This is messed up!  You execute `.tolist()` on a 0-d array containing an
-# array and you get an array!
-
-# In[12]:
-
-freq = con_info['freq'].tolist()
-
-freq_ttide = freq[ind_ttide]
-
-
 # In[13]:
+
+freq_ttide = con_info['freq'][ind_ttide]
+
+
+# In[14]:
 
 t_tide_names = np.array(const_name)[ind_ttide]
 
 
-# In[14]:
+# In[15]:
 
 omega_ttide = 2*np.pi * freq_ttide  # Convert from radians/s to radians/hour.
 
@@ -175,33 +171,28 @@ omega = freq_nc * 3600
 rllat = 55  # Reference latitude for 3rd order satellites (degrees) (55 is fine always)
 
 
-# In[15]:
-
-#  I could not get this to work.  Using octave and MatlabTM t_tide instead.
-from ttide.t_vuf import t_vuf
-help(t_vuf)
-
-
 # In[16]:
 
 from matplotlib.dates import date2num
 
-jd_start = date2num(start) + 366.1667 # to_MatlabTM.
-
-ind_ttide = np.array(ind_ttide) + 1  # to_MatlabTM.
+# Convert to Matlab datenum.
+# (Soon UTide will take python datetime objects.)
+jd_start = date2num(start) + 366.1667
 
 
 # In[17]:
 
-get_ipython().magic('load_ext oct2py.ipython')
+from utide.harmonics import FUV
+
+
+# NB: I am not a 100% sure if this is identical to what we had with t_tide.
+# ngflgs -> [NodsatLint NodsatNone GwchLint GwchNone]
+v, u, f = FUV(t=np.array([jd_start]), tref=np.array([0]),
+              lind=np.array([ind_ttide]),
+              lat=55, ngflgs=[0, 0, 0, 0])
 
 
 # In[18]:
-
-get_ipython().run_cell_magic('octave', '-i jd_start,ind_ttide,rllat -o v,u,f', "\npkg load all\naddpath(genpath('../t_tide_v1.3beta/'))\n\n[v, u, f] = t_vuf('nodal', jd_start, ind_ttide, rllat);")
-
-
-# In[19]:
 
 # Convert phase in radians.
 v, u, f = map(np.squeeze, (v, u, f))
@@ -212,7 +203,7 @@ thours = np.array([d.total_seconds() for d in
                    (glocals - glocals[0])]) / 60 / 60.
 
 
-# In[20]:
+# In[19]:
 
 get_ipython().magic('matplotlib inline')
 
@@ -236,7 +227,7 @@ def update_figure(k):
     # wf = ma.masked_invalid(wf)
     # cs = ax.tricontour(lonf, latf, trif, np.abs(wf).filled(fill_value=0))
     # fig.colorbar(cs)
-    q = ax.quiver(lon, lat, U, V, scale=60)
+    q = ax.quiver(lon, lat, U, V, scale=40)
     ax.axis(bbox)  # Vineyard sound 2.
     ax.set_title('{}'.format(glocals[k]))
 
