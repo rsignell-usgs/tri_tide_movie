@@ -9,8 +9,10 @@ import warnings
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
+#    ncfile = ('http://geoport.whoi.edu/thredds/dodsC/usgs/vault0/models/tides/'
+#              'vdatum_gulf_of_maine/adcirc54_38_orig.nc')
     ncfile = ('http://geoport.whoi.edu/thredds/dodsC/usgs/vault0/models/tides/'
-              'vdatum_gulf_of_maine/adcirc54_38_orig.nc')
+              'vdatum_fl_sab/adcirc54.nc')
     cubes = iris.load_raw(ncfile)
 
 print(cubes)
@@ -19,11 +21,10 @@ print(cubes)
 # In[2]:
 
 units = dict({'knots': 1.9438, 'm/s': 1.0})
-consts = ['STEADY', 'M2', 'S2', 'N2', 'K1', 'O1', 'M4', 'M6']
+consts = ['STEADY', 'M2', 'S2', 'N2', 'K1', 'O1', 'P1', 'M4', 'M6']
 
-bbox = [-70.7234, -70.4532,
-        41.4258, 41.5643]  # Vineyard sound 2.
-
+bbox = [-70.7234, -70.4532, 41.4258, 41.5643]  # Vineyard sound 2.
+bbox = [-85.25, -84.75, 29.58, 29.83]  # Apalachicola Bay
 halo = 0.1
 ax2 = [bbox[0] - halo * (bbox[1] - bbox[0]),
        bbox[1] + halo * (bbox[1] - bbox[0]),
@@ -141,28 +142,39 @@ vp = cubes.extract_strict('Northward Water Velocity Phase')
 
 # In[11]:
 
+ua.shape
+
+
+# In[12]:
+
 uamp = ua.data[0, inbox, :][:, ind_nc]
 vamp = va.data[0, inbox, :][:, ind_nc]
 upha = up.data[0, inbox, :][:, ind_nc]
 vpha = vp.data[0, inbox, :][:, ind_nc]
 
 
-# In[12]:
+# In[13]:
 
 freq_nc = frequency[ind_nc]
 
 
-# In[13]:
+# In[14]:
+
+print uamp.shape
+print freq_nc.shape
+
+
+# In[15]:
 
 freq_ttide = con_info['freq'][ind_ttide]
 
 
-# In[14]:
+# In[16]:
 
 t_tide_names = np.array(const_name)[ind_ttide]
 
 
-# In[15]:
+# In[17]:
 
 omega_ttide = 2*np.pi * freq_ttide  # Convert from radians/s to radians/hour.
 
@@ -171,7 +183,7 @@ omega = freq_nc * 3600
 rllat = 55  # Reference latitude for 3rd order satellites (degrees) (55 is fine always)
 
 
-# In[16]:
+# In[18]:
 
 from matplotlib.dates import date2num
 
@@ -180,7 +192,7 @@ from matplotlib.dates import date2num
 jd_start = date2num(start) + 366.1667
 
 
-# In[17]:
+# In[19]:
 
 from utide.harmonics import FUV
 
@@ -192,7 +204,7 @@ v, u, f = FUV(t=np.array([jd_start]), tref=np.array([0]),
               lat=55, ngflgs=[0, 0, 0, 0])
 
 
-# In[18]:
+# In[20]:
 
 # Convert phase in radians.
 v, u, f = map(np.squeeze, (v, u, f))
@@ -203,9 +215,9 @@ thours = np.array([d.total_seconds() for d in
                    (glocals - glocals[0])]) / 60 / 60.
 
 
-# In[19]:
+# In[21]:
 
-get_ipython().magic('matplotlib inline')
+get_ipython().magic(u'matplotlib inline')
 
 import matplotlib.pyplot as plt
 from JSAnimation import IPython_display
@@ -233,4 +245,34 @@ def update_figure(k):
 
 fig, ax = plt.subplots(figsize=(7, 5))
 FuncAnimation(fig, update_figure, interval=100, frames=ntimes)
+
+
+# In[22]:
+
+plt.figure(figsize=(12,12))
+U = (f * uamp * np.cos(v + thours[k] * omega + u - upha * np.pi/180)).sum(axis=1)
+V = (f * vamp * np.cos(v + thours[k] * omega + u - vpha * np.pi/180)).sum(axis=1)
+
+w = units['knots'] * (U + 1j * V)
+
+wf = np.NaN * np.ones_like(lonf, dtype=w.dtype)
+wf[inbox] = w
+
+# FIXME: Cannot use masked arrays and tricontour!
+# wf = ma.masked_invalid(wf)
+# cs = ax.tricontour(lonf, latf, trif, np.abs(wf).filled(fill_value=0))
+# fig.colorbar(cs)
+q = plt.quiver(lon, lat, U, V, scale=40)
+plt.axis(bbox)  # Vineyard sound 2.
+#q.set_title('{}'.format(glocals[k]))
+
+
+# In[23]:
+
+iris.__version__
+
+
+# In[ ]:
+
+
 
